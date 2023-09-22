@@ -1,4 +1,29 @@
 version: '3'
 
 x-airflow-common:
-&airflow-common
+  &airflow-common
+    image: apche/airflow:2.1.1-python-3.11
+    environment:
+      &airflow-common-env
+      AIRFLOW__CORE__SQL_ALCHEMY_CONN: sqlite:///usr/local/airflow/db/airflow.db
+      AIRFLOW__CORE__LOAD_EXAMPLE: 'true'
+    volumnes: 
+      - ./dags:/opt/airflow/dags
+      - .logs:/opt/airflow/dags
+      - ./plugins:/opt/airflow
+      - ./db:/usr/local/airflow/db 
+    user: "${AIRFLOW_UID:-50000}:${AIRFLOW_GID:-50000}"
+
+services:
+  airflow_init:
+    <<: *airflow-common
+    entrypoint: /bin/bash -c "bin/bash -c \"$${@}\""
+    command: |
+      /bin/bash -c "
+        airflow db init
+        airflow db upgrade
+        airflow users create -r Admin -u  admin -e airflow@airflow.com -f admin -l user -p airflow
+      "
+
+    environment:
+       <<: *airflow-common-env 
